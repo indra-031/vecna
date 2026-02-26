@@ -95,24 +95,24 @@ bash vecna.sh test.target.com
 ## 📂 Output Structure
 
 Vecna generates:
-
-output/
- ├── dns-output.json
- ├── http-output.json
-
-found/
- ├── nuclei.json
- ├── internal.json
- ├── thirdparty.json
-
-poc/
- ├── target.domain/
- │ ├── dns.json
- │ ├── http.json
- │ ├── raw_http.txt
- │ ├── screenshot.png
- │ └── report.json
-
+```
+logs/1/output/
+   ├── dns-output.json
+   ├── http-output.json
+   ...
+logs/1/found/
+   ├── nuclei.json
+   ├── internal.json
+   ├── thirdparty.json
+   ...
+logs/1/poc/
+   ├── target.domain/
+   │ ├── dns.json
+   │ ├── http.json
+   │ ├── raw_http.txt
+   │ ├── screenshot.png
+   │ └── report.json
+```
 Everything you need for a clean bug bounty report.
 
 ---
