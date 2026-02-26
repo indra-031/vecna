@@ -27,17 +27,17 @@ Designed for bug bounty hunters, red teamers, and automation freaks.
 ## ⚙️ Installation
 
 Clone the repository:
-
+```
 git clone https://github.com/indra-031/vecna.git
-
+```
 Go to install directory:
-
+``
 cd vecna/install
-
+``
 Run the installer:
-
+```
 python3 install.py
-
+```
 The installer will:
 
 - Install required Python dependencies  
@@ -58,14 +58,14 @@ Go to:
 configs/telegram-settings.json
 
 Edit the file and replace the placeholder values:
-
+```
 {
   "TELEGRAM_TOKEN": "YOUR_BOT_TOKEN",
   "TELEGRAM_CHAT_ID": "YOUR_CHAT_ID",
   "TELEGRAM_TOPIC_ID": "YOUR_TOPIC_ID",
   "TELEGRAM_ENABLED": true
 }
-
+```
 ### Required Steps:
 
 1. Create a Telegram bot using @BotFather
@@ -83,13 +83,13 @@ If you don’t want Telegram alerts, simply set:
 ## 🚀 Usage
 
 Run Vecna against a file of domains:
-
+```
 bash vecna.sh domains.txt
-
+```
 Run Vecna against a single target:
-
+```
 bash vecna.sh test.target.com
-
+```
 ---
 
 ## 📂 Output Structure
