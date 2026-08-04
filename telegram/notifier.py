@@ -1,73 +1,57 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Telegram Notifier for Vecna Takeover Alerts
+- Minimal output: only a progress counter (e.g., [5/22]) that updates in-place.
+- Falls back to text-only if photo sending fails.
+"""
 
 import os
 import json
 import time
 import requests
 from datetime import datetime, timezone
+from pathlib import Path
 
 # ======================================
-# Paths
+# Constants & Paths
 # ======================================
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-CONFIG_FILE = os.path.join(ROOT_DIR, "configs", "telegram-settings.json")
-FINAL_FILE = os.path.join(ROOT_DIR, "found", "final.json")
-POC_DIR = os.path.join(ROOT_DIR, "poc")
+ROOT_DIR = Path(__file__).resolve().parent.parent
+CONFIG_FILE = ROOT_DIR / "configs" / "telegram-settings.json"
+FINAL_FILE = ROOT_DIR / "found" / "final.json"
+POC_DIR = ROOT_DIR / "poc"
 
-TIMEOUT = 10
+TIMEOUT = 15
 SEND_DELAY = 0.7
-MAX_NETWORK_UNREACHABLE_RETRIES = 10   # only for "Network is unreachable"
+MAX_RETRIES = 5
+MAX_NETWORK_UNREACHABLE_RETRIES = 10
+MAX_CAPTION_LENGTH = 900          # Safe limit (Telegram max 1024)
+PHOTO_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 
 # ======================================
-# Config
+# Config Loader
 # ======================================
 
 def load_config():
-    with open(CONFIG_FILE, "r") as f:
+    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
 # ======================================
-# Telegram Senders
+# Safe Poster with Retry (silent, only logs via return)
 # ======================================
 
-def send_message(token, chat_id, message, topic_id=None):
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True
-    }
-    if topic_id:
-        payload["message_thread_id"] = int(topic_id)
-    return safe_post(url, payload)
-
-
-def send_photo(token, chat_id, photo_path, caption, topic_id=None):
-    url = f"https://api.telegram.org/bot{token}/sendPhoto"
-    with open(photo_path, "rb") as photo:
-        files = {"photo": photo}
-        data = {
-            "chat_id": chat_id,
-            "caption": caption,
-            "parse_mode": "Markdown",
-            "disable_web_page_preview": True
-        }
-        if topic_id:
-            data["message_thread_id"] = int(topic_id)
-        return safe_post(url, data, files=files)
-
-
-def safe_post(url, data, files=None):
+def safe_post(url, data=None, files=None, max_retries=MAX_RETRIES):
     """
-    - 429: indefinite retry with retry_after (silent)
-    - Network unreachable: max 10 retries then fail (silent)
-    - Other errors: indefinite retry with 5s sleep (silent)
+    Send request with retries. Returns True on success, False on failure.
+    All prints are suppressed; only the final return indicates outcome.
     """
+    attempts = 0
     network_unreachable_count = 0
 
-    while True:
+    while attempts < max_retries:
+        attempts += 1
         try:
             if files:
                 response = requests.post(url, data=data, files=files, timeout=TIMEOUT)
@@ -82,33 +66,78 @@ def safe_post(url, data, files=None):
                 time.sleep(retry_after)
                 continue
 
-            # Other status codes → indefinite retry
+            # Other errors: wait and retry
             time.sleep(5)
 
         except requests.RequestException as e:
-            # Specific "Network is unreachable" error
             if "Network is unreachable" in str(e):
                 network_unreachable_count += 1
                 if network_unreachable_count >= MAX_NETWORK_UNREACHABLE_RETRIES:
                     return False
                 time.sleep(5)
                 continue
+            else:
+                time.sleep(5)
 
-            # Other network errors → indefinite retry
-            time.sleep(5)
+    return False
+
+# ======================================
+# Telegram Senders (silent)
+# ======================================
+
+def send_message(token, chat_id, text, topic_id=None):
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown",
+        "disable_web_page_preview": True
+    }
+    if topic_id:
+        payload["message_thread_id"] = int(topic_id)
+    return safe_post(url, data=payload)
+
+def send_photo(token, chat_id, photo_path, caption, topic_id=None):
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    with open(photo_path, "rb") as photo_file:
+        files = {"photo": photo_file}
+        data = {
+            "chat_id": chat_id,
+            "caption": caption[:MAX_CAPTION_LENGTH],
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": True
+        }
+        if topic_id:
+            data["message_thread_id"] = int(topic_id)
+        return safe_post(url, data=data, files=files)
+
+# ======================================
+# Smart Alert Sender (Photo with Fallback to Text)
+# ======================================
+
+def send_alert(token, chat_id, message_text, screenshot_path, topic_id=None):
+    """Try photo, fallback to text if photo fails or is invalid."""
+    if screenshot_path and os.path.exists(screenshot_path):
+        file_size = os.path.getsize(screenshot_path)
+        if file_size <= PHOTO_MAX_SIZE:
+            success = send_photo(token, chat_id, screenshot_path, message_text, topic_id)
+            if success:
+                return True
+    # Fallback to text-only
+    return send_message(token, chat_id, message_text, topic_id)
 
 # ======================================
 # Load Final Report
 # ======================================
 
 def load_final():
-    if not os.path.exists(FINAL_FILE):
+    if not FINAL_FILE.exists():
         return []
-    with open(FINAL_FILE, "r") as f:
+    with open(FINAL_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
 # ======================================
-# Severity Styling
+# Message Builder
 # ======================================
 
 def severity_emoji(severity):
@@ -119,12 +148,8 @@ def severity_emoji(severity):
         "low": "🔎"
     }.get(str(severity).lower(), "ℹ️")
 
-# ======================================
-# Message Builder
-# ======================================
-
 def build_message(entry):
-    domain = entry.get("domain")
+    domain = entry.get("domain", "unknown")
     services = ", ".join(entry.get("services", []))
     engines = ", ".join(entry.get("engines", []))
     confidence = entry.get("confidence", 0)
@@ -134,27 +159,34 @@ def build_message(entry):
     emoji = severity_emoji(severity)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    message = f"""
-{emoji} *VECNA TAKEOVER DETECTED* {emoji}
-
-🎯 *Target:* `{domain}`
-🧩 *Service(s):* `{services}`
-🧠 *Engine(s):* `{engines}`
-
-📊 *Severity:* *{severity.upper()}*
-📈 *Confidence:* `{confidence}%`
-"""
+    lines = [
+        f"{emoji} *VECNA TAKEOVER DETECTED* {emoji}",
+        "",
+        f"🎯 *Target:* `{domain}`",
+        f"🧩 *Service(s):* `{services}`",
+        f"🧠 *Engine(s):* `{engines}`",
+        "",
+        f"📊 *Severity:* *{severity.upper()}*",
+        f"📈 *Confidence:* `{confidence}%`"
+    ]
 
     if discussions:
-        message += "\n📚 *References:*\n"
+        lines.append("")
+        lines.append("📚 *References:*")
         if isinstance(discussions, list):
             for d in discussions:
-                message += f"- {d}\n"
+                lines.append(f"- {d}")
         else:
-            message += f"- {discussions}\n"
+            lines.append(f"- {discussions}")
 
-    message += f"\n⏱ `{now}`\n"
-    return message.strip()
+    lines.append("")
+    lines.append(f"⏱ `{now}`")
+
+    full_text = "\n".join(lines)
+    # Trim if excessively long (safety)
+    if len(full_text) > MAX_CAPTION_LENGTH * 2:
+        full_text = full_text[:MAX_CAPTION_LENGTH * 2 - 50] + "\n... (trimmed)"
+    return full_text
 
 # ======================================
 # Main
@@ -162,9 +194,7 @@ def build_message(entry):
 
 def main():
     config = load_config()
-
     if not config.get("TELEGRAM_ENABLED", False):
-        print("[-] Telegram disabled.")
         return
 
     token = config["TELEGRAM_TOKEN"]
@@ -172,35 +202,34 @@ def main():
     topic_id = config.get("TELEGRAM_TOPIC_ID")
 
     entries = load_final()
-
     if not entries:
-        print("[-] No entries found.")
         return
 
+    total = len(entries)
     sent = 0
 
-    for entry in entries:
-        domain = entry.get("domain")
-        message = build_message(entry)
-        screenshot_path = os.path.join(POC_DIR, domain, "screenshot.png")
+    # Print initial progress (0/total)
+    print(f"\r[{sent}/{total}]", end='', flush=True)
 
-        if os.path.exists(screenshot_path):
-            success = send_photo(token, chat_id, screenshot_path, message, topic_id)
-        else:
-            success = send_message(token, chat_id, message, topic_id)
+    for idx, entry in enumerate(entries, start=1):
+        domain = entry.get("domain", f"entry_{idx}")
+        message_text = build_message(entry)
+        screenshot_path = POC_DIR / domain / "screenshot.png"
 
+        success = send_alert(token, chat_id, message_text, screenshot_path, topic_id)
         if success:
             sent += 1
+
+        # Update progress in-place
+        print(f"\r[{sent}/{total}]", end='', flush=True)
+
+        # Small delay between messages (except last)
+        if idx < total:
             time.sleep(SEND_DELAY)
-        # if not sent, nothing printed (silent retry already handled)
 
-    # Final summary
-    if sent == 0 and entries:
-        print("[!] Unable to send Telegram alerts due to network error.")
-    else:
-        print(f"[+] Sent {sent} Telegram alert(s).")
-
-# ======================================
+    # Final newline and summary
+    print()  # newline after progress
+    print(f"Done: {sent} of {total} alerts sent.")
 
 if __name__ == "__main__":
     main()
