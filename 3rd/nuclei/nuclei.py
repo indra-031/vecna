@@ -32,7 +32,7 @@ def normalize_domains(domains_file):
     return normalized_file
 
 def run_nuclei(target_file):
-    print("[+] Running Nuclei (takeover templates only)...")
+    print("[+] Running Nuclei (takeover templates only - Please wait)...")
 
     cmd = [
         "nuclei",
@@ -102,7 +102,7 @@ def save_findings(findings):
     output_file = FOUND_DIR / "nuclei.json"
     with open(output_file, "w") as f:
         json.dump(findings, f, indent=4)
-    print(f"[+] Saved {len(findings)} nuclei findings")
+    print(f"[+] Found {len(findings)} vulnerable target(s) via Nuclei.")
 
 def main():
     if len(sys.argv) < 2:
