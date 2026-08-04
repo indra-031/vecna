@@ -5,7 +5,13 @@ set -euo pipefail
 DOMAINS_FILE="${1:-}"
 
 if [[ -z "$DOMAINS_FILE" ]]; then
-    echo "Usage: bash vecna.sh domains.txt"
+    echo "Usage: bash vecna.sh domains.txt Or bash vecna.sh test.example.com"
+    exit 1
+fi
+
+# Check if file exists
+if [[ ! -f "$DOMAINS_FILE" ]]; then
+    echo "Error: File not found: $DOMAINS_FILE"
     exit 1
 fi
 
