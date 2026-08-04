@@ -32,7 +32,7 @@ def normalize_domains(domains_file):
     return normalized_file
 
 def run_nuclei(target_file):
-    print("[+] Running Nuclei (takeover templates only - Please wait)...")
+    print("[+] Running Nuclei (takeover templates only - please wait)...")
 
     cmd = [
         "nuclei",
