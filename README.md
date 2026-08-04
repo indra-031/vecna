@@ -87,6 +87,16 @@ Run Vecna against a file of domains:
 ```
 bash vecna.sh domains.txt
 ```
+domains.txt example:
+```
+test1.example.com
+test2.example.com
+test3.example.com
+test4.test.example.com
+...
+```
+without https:// or http:// or path (just subdomain+doamin+tld)
+
 Run Vecna against a single target:
 ```
 bash vecna.sh test.target.com
