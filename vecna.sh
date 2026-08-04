@@ -87,7 +87,7 @@ python3 -u "$ROOT_DIR/3rd/subzy/subzy.py" "$DOMAINS_FILE"
 echo
 
 echo
-echo "[8/12] Nuclei Takeover Scan..."
+echo "[8/12] Nuclei Takeover Scan (takeover templates only - please wait)..."
 python3 -u "$ROOT_DIR/3rd/nuclei/nuclei.py" "$DOMAINS_FILE"
 echo
 
