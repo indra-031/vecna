@@ -104,12 +104,11 @@ async def status_phase(domains):
                     "http": {"status": http_status}
                 }
 
-                if https_status in (403, 404):
+                if https_status != "error":
                     body_targets.append((domain, "https"))
-
-                if http_status in (403, 404):
+                elif http_status != "error":
                     body_targets.append((domain, "http"))
-
+                    
         tasks = [worker(d) for d in domains]
 
         total = len(tasks)
@@ -119,7 +118,7 @@ async def status_phase(domains):
             print(f"\r[STATUS] {i}/{total}", end="", flush=True)
 
     print()
-    print(f"Found {len(body_targets)} targets (403/404)")
+    print(f"Found {len(body_targets)} targets for body fetch")
     return results, body_targets
 
 
