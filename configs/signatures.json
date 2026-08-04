@@ -1,0 +1,165 @@
+[
+  {
+    "id": "aws_s3_unclaimed_bucket",
+    "enabled": true,
+    "service": "AWS S3",
+    "severity": "high",
+    "confidence": 90,
+    "description": "S3 bucket does not exist but DNS still points to it",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "s3.amazonaws.com",
+          ".s3.",
+          "amazonaws.com"
+        ]
+      },
+      "http": {
+        "status_in": [404],
+        "body_contains_any": [
+          "NoSuchBucket",
+          "The specified bucket does not exist"
+        ]
+      }
+    }
+  },
+
+  {
+    "id": "github_pages_unclaimed",
+    "enabled": true,
+    "service": "GitHub Pages",
+    "severity": "high",
+    "confidence": 85,
+    "description": "GitHub Pages site not configured",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "github.io"
+        ]
+      },
+      "http": {
+        "body_contains_any": [
+          "There isn't a GitHub Pages site here",
+          "Site not found"
+        ]
+      }
+    }
+  },
+
+  {
+    "id": "heroku_unclaimed_app",
+    "enabled": true,
+    "service": "Heroku",
+    "severity": "high",
+    "confidence": 90,
+    "description": "Heroku application does not exist",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "herokudns.com",
+          "herokuapp.com"
+        ]
+      },
+      "http": {
+        "body_contains_any": [
+          "No such app"
+        ]
+      }
+    }
+  },
+
+  {
+    "id": "vercel_unclaimed_project",
+    "enabled": true,
+    "service": "Vercel",
+    "severity": "high",
+    "confidence": 85,
+    "description": "Vercel deployment not found",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "vercel.app",
+          "now.sh"
+        ]
+      },
+      "http": {
+        "body_contains_any": [
+          "The deployment could not be found",
+          "Project not found"
+        ]
+      }
+    }
+  },
+
+  {
+    "id": "azure_unclaimed_app",
+    "enabled": true,
+    "service": "Azure App Service",
+    "severity": "high",
+    "confidence": 90,
+    "description": "Azure Web App not configured",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "azurewebsites.net"
+        ]
+      },
+      "http": {
+        "body_contains_any": [
+          "404 Web Site not found"
+        ]
+      }
+    }
+  },
+
+  {
+    "id": "fastly_unclaimed_service",
+    "enabled": true,
+    "service": "Fastly",
+    "severity": "medium",
+    "confidence": 75,
+    "description": "Fastly unknown domain error indicating unconfigured service",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "fastly.net"
+        ]
+      },
+      "http": {
+        "status_in": [503],
+        "body_contains_any": [
+          "Fastly error: unknown domain"
+        ]
+      }
+    }
+  },
+
+  {
+    "id": "cloudfront_unclaimed_distribution_refined",
+    "enabled": true,
+    "service": "AWS CloudFront",
+    "severity": "medium",
+    "confidence": 60,
+    "description": "CloudFront distribution exists but may not be mapped to origin (requires manual verification)",
+    "match_logic": "AND",
+    "conditions": {
+      "dns": {
+        "cname_contains": [
+          "cloudfront.net"
+        ]
+      },
+      "http": {
+        "body_contains_any": [
+          "The request could not be satisfied",
+          "Bad request"
+        ]
+      }
+    }
+  }
+]
