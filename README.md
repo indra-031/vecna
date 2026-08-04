@@ -26,17 +26,17 @@ Designed for bug bounty hunters, red teamers, and automation freaks.
 ## ⚙️ Installation
 
 Clone the repository:
-
+```
 git clone https://github.com/indra-031/vecna.git
-
+```
 Go to install directory:
-
+```
 cd vecna/install
-
+```
 Run the installer:
-
+```
 python3 install.py
-
+```
 The installer will:
 
 - Install required Python dependencies
@@ -84,28 +84,30 @@ If you don’t want Telegram alerts, simply set:
 ## 🚀 Usage
 
 Run Vecna against a file of domains:
-
+```
 bash vecna.sh domains.txt
-
+```
 Run Vecna against a single target:
-
+```
 bash vecna.sh test.target.com
-
+```
 ---
 
 ## 📂 Output Structure
 
 Vecna generates:
-
+```
 output/
  ├── dns-output.json
  ├── http-output.json
-
+```
+```
 found/
  ├── nuclei.json
  ├── subzy.json
  ├── subjack.json
-
+```
+```
 poc/
  ├── target.domain/
  │    ├── dns.json
@@ -113,7 +115,7 @@ poc/
  │    ├── raw_http.txt
  │    ├── screenshot.png
  │    └── report.json
-
+```
 Everything you need for a clean bug bounty report.
 
 ---
