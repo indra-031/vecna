@@ -56,7 +56,7 @@ When done, Vecna is ready to hunt 😈
 
 ---
 
-# 📢 Telegram Configuration (Optional but Recommended)
+# 📢 Telegram Configuration
 
 If you want real-time alerts when a takeover is detected, configure Telegram manually.
 
@@ -351,26 +351,6 @@ Complete execution logs:
 logs/
  └── <run_number>/
 ```
-
----
-
-# 🤖 Telegram Integration
-
-Enable instant notifications by editing:
-
-```
-configs/telegram-settings.json
-```
-
-Vecna sends detailed alerts containing:
-
-- Domain
-- Detected service
-- Severity
-- Confidence score
-- Detection engines
-- Discussion links (if available)
-- Screenshot evidence
 
 ---
 
