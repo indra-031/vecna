@@ -88,7 +88,7 @@ python3 -u "$ROOT_DIR/3rd/tko-subs/tko-subs.py" "$DOMAINS_FILE"
 echo
 
 echo
-echo "[7/12] Subzy Fingerprint Matching..."
+echo "[7/12] Subzy Takeover Scan (please wait)..."
 python3 -u "$ROOT_DIR/3rd/subzy/subzy.py" "$DOMAINS_FILE"
 echo
 
