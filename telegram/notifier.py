@@ -17,6 +17,7 @@ POC_DIR = os.path.join(ROOT_DIR, "poc")
 
 TIMEOUT = 10
 SEND_DELAY = 0.7
+MAX_NETWORK_UNREACHABLE_RETRIES = 10   # only for "Network is unreachable"
 
 # ======================================
 # Config
@@ -31,46 +32,40 @@ def load_config():
 # ======================================
 
 def send_message(token, chat_id, message, topic_id=None):
-
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-
     payload = {
         "chat_id": chat_id,
         "text": message,
         "parse_mode": "Markdown",
-        "disable_web_page_preview": True   # ✅ THIS LINE
+        "disable_web_page_preview": True
     }
-
     if topic_id:
         payload["message_thread_id"] = int(topic_id)
-
     return safe_post(url, payload)
 
 
 def send_photo(token, chat_id, photo_path, caption, topic_id=None):
-
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
-
     with open(photo_path, "rb") as photo:
-
-        files = {
-            "photo": photo
-        }
-
+        files = {"photo": photo}
         data = {
             "chat_id": chat_id,
             "caption": caption,
             "parse_mode": "Markdown",
-            "disable_web_page_preview": True   # ✅ THIS LINE
+            "disable_web_page_preview": True
         }
-
         if topic_id:
             data["message_thread_id"] = int(topic_id)
-
-        return safe_post(url, data, files)
+        return safe_post(url, data, files=files)
 
 
 def safe_post(url, data, files=None):
+    """
+    - 429: indefinite retry with retry_after (silent)
+    - Network unreachable: max 10 retries then fail (silent)
+    - Other errors: indefinite retry with 5s sleep (silent)
+    """
+    network_unreachable_count = 0
 
     while True:
         try:
@@ -87,9 +82,19 @@ def safe_post(url, data, files=None):
                 time.sleep(retry_after)
                 continue
 
+            # Other status codes → indefinite retry
             time.sleep(5)
 
-        except requests.RequestException:
+        except requests.RequestException as e:
+            # Specific "Network is unreachable" error
+            if "Network is unreachable" in str(e):
+                network_unreachable_count += 1
+                if network_unreachable_count >= MAX_NETWORK_UNREACHABLE_RETRIES:
+                    return False
+                time.sleep(5)
+                continue
+
+            # Other network errors → indefinite retry
             time.sleep(5)
 
 # ======================================
@@ -99,7 +104,6 @@ def safe_post(url, data, files=None):
 def load_final():
     if not os.path.exists(FINAL_FILE):
         return []
-
     with open(FINAL_FILE, "r") as f:
         return json.load(f)
 
@@ -120,7 +124,6 @@ def severity_emoji(severity):
 # ======================================
 
 def build_message(entry):
-
     domain = entry.get("domain")
     services = ", ".join(entry.get("services", []))
     engines = ", ".join(entry.get("engines", []))
@@ -151,7 +154,6 @@ def build_message(entry):
             message += f"- {discussions}\n"
 
     message += f"\n⏱ `{now}`\n"
-
     return message.strip()
 
 # ======================================
@@ -159,7 +161,6 @@ def build_message(entry):
 # ======================================
 
 def main():
-
     config = load_config()
 
     if not config.get("TELEGRAM_ENABLED", False):
@@ -179,10 +180,8 @@ def main():
     sent = 0
 
     for entry in entries:
-
         domain = entry.get("domain")
         message = build_message(entry)
-
         screenshot_path = os.path.join(POC_DIR, domain, "screenshot.png")
 
         if os.path.exists(screenshot_path):
@@ -193,8 +192,13 @@ def main():
         if success:
             sent += 1
             time.sleep(SEND_DELAY)
+        # if not sent, nothing printed (silent retry already handled)
 
-    print(f"[+] Sent {sent} Telegram alert(s).")
+    # Final summary
+    if sent == 0 and entries:
+        print("[!] Unable to send Telegram alerts due to network error.")
+    else:
+        print(f"[+] Sent {sent} Telegram alert(s).")
 
 # ======================================
 
