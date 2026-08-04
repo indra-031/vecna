@@ -32,11 +32,14 @@ def normalize_domains(domains_file):
     return normalized_file
 
 def run_nuclei(target_file):
-    print("[+] Running Nuclei (takeover templates only - please wait)...")
+    # print("[+] Running Nuclei (takeover templates only - please wait)...")
 
     cmd = [
         "nuclei",
         "-silent",
+        "-duc",
+        "-rl", str(NUCLEI_RATE_LIMIT),
+        "-c", str(NUCLEI_CONCURRENCY),
         "-j",
         "-t", str(TEMPLATES_DIR),
         "-l", str(target_file),
